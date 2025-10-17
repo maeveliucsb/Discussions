@@ -1,0 +1,28 @@
+---
+title: "Oct 17"
+author: "Maeve!"
+format: html
+editor: visual
+---
+
+## Preamble
+
+```{r}
+#libraries
+library(here)
+library(tidyverse)
+library(sf)
+library(tmap)
+#data
+sb_protected_areas <- st_read(here("data", "cpad_super_units_sb.shp")) |>  
+  st_transform("ESRI:102009")
+
+sb_city_boundaries <- st_read(here("data", "sb_city_boundaries_2003.shp")) |> 
+  st_transform("ESRI:102009")
+
+sb_county_boundary <- st_read(here("data", "sb_county_boundary_2020.shp")) |> 
+  st_transform("ESRI:102009")
+
+aves <- st_read(here("data", "aves_observations_2020_2024.shp")) |> 
+  st_transform("ESRI:102009")
+```
