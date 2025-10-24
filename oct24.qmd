@@ -1,0 +1,91 @@
+---
+title: "oct24"
+author: "Maeve!"
+format: html
+editor: visual
+---
+## Loading Packages
+```{r}
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(spData)
+library(spDataLarge)
+library(sf)
+library(stars)
+library(terra)
+```
+
+## Importing Data
+
+```{r}
+dem <- terra::rast(system.file("raster/dem.tif", package = "spDataLarge"))
+landsat <- terra::rast(system.file("raster/landsat.tif", package = "spDataLarge"))
+srtm <- terra::rast(system.file("raster/srtm.tif", package = "spDataLarge"))
+```
+
+#box plot
+```{r}
+hist(dem,
+     main = "Digital Elevation Model Distribution",
+     xlab = "Value")
+
+boxplot(dem,
+        main = "Digital Elevation Model Distribution",
+        ylab = "Value")
+```
+```{r}
+# Define a reclassification matrix
+rcl <- matrix(c(-Inf, 300, 0, # values -Inf to 300 = 0
+                300, 500, 1,  # values 300 to 500 = 1
+                500, Inf, 2), # values 500 to Inf = 2
+              ncol = 3, byrow = TRUE)
+
+# Apply the matrix to reclassify the raster, making all cells 0 or 1 or 2
+dem_rcl <- terra::classify(dem, rcl = rcl)
+
+# Assign labels to the numerical categories
+levels(dem_rcl) <- tibble::tibble(id = 0:2, 
+                                  cats = c("low", "medium", "high"))
+
+# Calculate mean elevation for each category using original DEM values
+elevation_mean <- terra::zonal(dem, dem_rcl, fun = "mean")
+elevation_mean
+```
+
+```{r}
+scale_factor <- 0.0000275
+offset <- 0.2
+
+scale_function <- function(x) {
+  x * scale_factor + offset
+}
+
+landsat_scaled <- terra::app(landsat, fun = scale_function)
+
+ndwi_fun <- function(nir, green){
+  (nir - green) / (nir + green)
+}
+ndvi_fun <- function(nir, red){
+  (nir - red) / (nir + red)
+}
+
+ndwi_rast <- terra::lapp(landsat_scaled[[c(2, 4)]],
+                         fun = ndwi_fun)
+
+ndvi_rast <- terra::lapp(landsat_scaled[[c(4, 3)]],
+                         fun = ndvi_fun)
+
+plot(ndwi_rast,
+     main = "Zion National Park NDWI")
+plot(ndvi_rast,
+     main = "Zion National Park NDVI")
+
+combine <- c(ndvi_rast, ndwi_rast) # Stack rasters
+
+plot(combine, main = c("NDVI", "NDWI")) # Plot
+
+# Calculate correlation between raster layers 
+terra::layerCor(combine, fun = cor)
+```
